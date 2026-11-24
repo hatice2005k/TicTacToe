@@ -1,252 +1,505 @@
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class GamePanel extends JPanel {
 
-    // Renkler
-    private final Color BACKGROUND = new Color(25, 28, 38);
-    private final Color CELL_COLOR = new Color(48, 53, 68);
-    private final Color X_COLOR = new Color(70, 190, 180);
-    private final Color O_COLOR = new Color(235, 115, 135);
-    private final Color WIN_COLOR = new Color(40, 115, 85);
+    private final CardLayout cardLayout;
+    private final JPanel screenPanel;
 
-    // Oyun motoru
+    private final Color BACKGROUND = new Color(25, 25, 34);
+    private final Color CELL = new Color(43, 43, 55);
+    private final Color HOVER = new Color(65, 65, 82);
+    private final Color WIN = new Color(40, 115, 85);
+    private final Color X_COLOR = new Color(100, 180, 255);
+    private final Color O_COLOR = new Color(255, 130, 130);
+    private final Color TEXT = new Color(240, 240, 245);
+
+    private JTextField playerXField;
+    private JTextField playerOField;
+
     private Board board;
-
-    // Arayüz bileşenleri
-    private JButton[] cells = new JButton[9];
+    private JButton[] cells;
+    private WinningBoardPanel boardPanel;
 
     private JLabel statusLabel;
-    private JLabel xScoreLabel;
-    private JLabel oScoreLabel;
+    private JLabel scoreLabel;
+    private JLabel drawLabel;
 
-    private JButton restartButton;
+    private int drawCount = 0;
+    private boolean isDrawAlreadyCounted = false;
+
+    private String playerXName;
+    private String playerOName;
 
     public GamePanel() {
 
-        board = new Board();
-
-        setLayout(new BorderLayout(15, 15));
+        setLayout(new BorderLayout());
         setBackground(BACKGROUND);
 
-        setBorder(
-                BorderFactory.createEmptyBorder(25, 25, 25, 25)
-        );
+        cardLayout = new CardLayout();
+        screenPanel = new JPanel(cardLayout);
 
-        add(createHeader(), BorderLayout.NORTH);
-        add(createBoard(), BorderLayout.CENTER);
-        add(createFooter(), BorderLayout.SOUTH);
+        screenPanel.add(createStartScreen(), "START");
+        screenPanel.add(createGameScreen(), "GAME");
+
+        add(screenPanel, BorderLayout.CENTER);
+
+        cardLayout.show(screenPanel, "START");
     }
 
-    // Başlık ve skor tablosu
-    private JPanel createHeader() {
+    // START SCREEN
 
-        JPanel header = new JPanel();
+    private JPanel createStartScreen() {
 
-        header.setLayout(
-                new BoxLayout(header, BoxLayout.Y_AXIS)
+        JPanel panel = new JPanel(new BorderLayout(20, 30));
+        panel.setBackground(BACKGROUND);
+        panel.setBorder(new EmptyBorder(45, 35, 40, 35));
+
+        JLabel title = new JLabel("TIC TAC TOE", SwingConstants.CENTER);
+        title.setFont(new Font("Arial", Font.BOLD, 36));
+        title.setForeground(TEXT);
+
+        JLabel subtitle = new JLabel(
+                "OYUNCULARI BELİRLE",
+                SwingConstants.CENTER
+        );
+        subtitle.setFont(new Font("Arial", Font.PLAIN, 15));
+        subtitle.setForeground(new Color(175, 175, 190));
+
+        JPanel heading = new JPanel(new GridLayout(2, 1, 5, 12));
+        heading.setBackground(BACKGROUND);
+        heading.add(title);
+        heading.add(subtitle);
+
+        panel.add(heading, BorderLayout.NORTH);
+
+        JPanel form = new JPanel(new GridLayout(2, 1, 20, 20));
+        form.setBackground(BACKGROUND);
+
+        playerXField = createNameField();
+        playerOField = createNameField();
+
+        form.add(createPlayerInput("OYUNCU X", X_COLOR, playerXField));
+        form.add(createPlayerInput("OYUNCU O", O_COLOR, playerOField));
+
+        panel.add(form, BorderLayout.CENTER);
+
+        JButton startButton = createButton(
+                "OYUNU BAŞLAT",
+                new Color(55, 90, 125)
         );
 
-        header.setBackground(BACKGROUND);
+        startButton.addActionListener(e -> startGame());
 
-        JLabel title = new JLabel("TIC TAC TOE");
+        panel.add(startButton, BorderLayout.SOUTH);
 
-        title.setFont(new Font("Arial", Font.BOLD, 30));
-        title.setForeground(Color.WHITE);
-        title.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JPanel scorePanel = new JPanel(
-                new GridLayout(1, 2, 15, 0)
-        );
-
-        scorePanel.setBackground(BACKGROUND);
-
-        xScoreLabel = new JLabel("X : 0", SwingConstants.CENTER);
-        oScoreLabel = new JLabel("O : 0", SwingConstants.CENTER);
-
-        styleScoreLabel(xScoreLabel, X_COLOR);
-        styleScoreLabel(oScoreLabel, O_COLOR);
-
-        scorePanel.add(xScoreLabel);
-        scorePanel.add(oScoreLabel);
-
-        header.add(title);
-        header.add(Box.createVerticalStrut(20));
-        header.add(scorePanel);
-
-        return header;
+        return panel;
     }
 
-    // Skor etiketlerinin tasarımı
-    private void styleScoreLabel(JLabel label, Color color) {
+    private JPanel createPlayerInput(
+            String title,
+            Color color,
+            JTextField field
+    ) {
 
-        label.setFont(new Font("Arial", Font.BOLD, 20));
+        JPanel panel = new JPanel(new BorderLayout(5, 10));
+        panel.setBackground(BACKGROUND);
+
+        JLabel label = new JLabel(title);
+        label.setFont(new Font("Arial", Font.BOLD, 17));
         label.setForeground(color);
-        label.setOpaque(true);
-        label.setBackground(CELL_COLOR);
 
-        label.setBorder(
-                BorderFactory.createEmptyBorder(12, 10, 12, 10)
-        );
+        panel.add(label, BorderLayout.NORTH);
+        panel.add(field, BorderLayout.CENTER);
+
+        return panel;
     }
 
-    // Oyun tahtası
-    private JPanel createBoard() {
+    private JTextField createNameField() {
 
-        JPanel gameBoard = new JPanel(
-                new GridLayout(3, 3, 10, 10)
-        );
+        JTextField field = new JTextField();
 
-        gameBoard.setBackground(BACKGROUND);
+        field.setFont(new Font("Arial", Font.PLAIN, 19));
+        field.setForeground(Color.WHITE);
+        field.setBackground(CELL);
+        field.setCaretColor(Color.WHITE);
+
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(75, 75, 90)),
+                new EmptyBorder(10, 12, 10, 12)
+        ));
+
+        return field;
+    }
+
+    // GAME SCREEN
+
+    private JPanel createGameScreen() {
+
+        JPanel panel = new JPanel(new BorderLayout(10, 20));
+        panel.setBackground(BACKGROUND);
+        panel.setBorder(new EmptyBorder(25, 25, 20, 25));
+
+        // Üst bilgiler
+        JPanel topPanel = new JPanel(new GridLayout(3, 1, 5, 8));
+        topPanel.setBackground(BACKGROUND);
+
+        statusLabel = new JLabel("", SwingConstants.CENTER);
+        statusLabel.setFont(new Font("Arial", Font.BOLD, 23));
+        statusLabel.setForeground(TEXT);
+
+        scoreLabel = new JLabel("", SwingConstants.CENTER);
+        scoreLabel.setFont(new Font("Arial", Font.PLAIN, 17));
+        scoreLabel.setForeground(new Color(190, 190, 205));
+
+        drawLabel = new JLabel("Beraberlik: 0", SwingConstants.CENTER);
+        drawLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        drawLabel.setForeground(new Color(160, 160, 175));
+
+        topPanel.add(statusLabel);
+        topPanel.add(scoreLabel);
+        topPanel.add(drawLabel);
+
+        panel.add(topPanel, BorderLayout.NORTH);
+
+        // Oyun tahtası
+        boardPanel = new WinningBoardPanel();
+        boardPanel.setLayout(new GridLayout(3, 3, 10, 10));
+        boardPanel.setBackground(BACKGROUND);
+
+        cells = new JButton[9];
 
         for (int i = 0; i < 9; i++) {
 
-            JButton cell = new JButton("");
-
-            cell.setFont(new Font("Arial", Font.BOLD, 55));
-            cell.setForeground(Color.WHITE);
-            cell.setBackground(CELL_COLOR);
-
-            cell.setFocusPainted(false);
-            cell.setBorderPainted(false);
-
-            cells[i] = cell;
-
             final int index = i;
 
-            cell.addActionListener(e -> handleMove(index));
+            JButton button = new JButton("");
 
-            gameBoard.add(cell);
+            button.setFont(new Font("Arial", Font.BOLD, 65));
+            button.setForeground(TEXT);
+            button.setBackground(CELL);
+
+            button.setFocusPainted(false);
+            button.setBorderPainted(false);
+            button.setOpaque(true);
+            button.setContentAreaFilled(true);
+
+            button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+            button.addActionListener(e -> handleCellClick(index));
+
+            button.addMouseListener(new MouseAdapter() {
+
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    if (board != null &&
+                            isCellEmpty(index) &&
+                            !isGameFinished()) {
+                        button.setBackground(HOVER);
+                    }
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    updateCellColor(index);
+                }
+            });
+
+            cells[i] = button;
+            boardPanel.add(button);
         }
 
-        return gameBoard;
+        panel.add(boardPanel, BorderLayout.CENTER);
+
+        // Alt butonlar
+        JPanel bottomPanel = new JPanel(new GridLayout(1, 2, 10, 0));
+        bottomPanel.setBackground(BACKGROUND);
+
+        JButton newRoundButton = createButton(
+                "YENİ TUR",
+                new Color(55, 90, 125)
+        );
+
+        JButton menuButton = createButton(
+                "ANA MENÜ",
+                new Color(65, 65, 80)
+        );
+
+        newRoundButton.addActionListener(e -> resetGame());
+        menuButton.addActionListener(e -> showStartScreen());
+
+        bottomPanel.add(newRoundButton);
+        bottomPanel.add(menuButton);
+
+        panel.add(bottomPanel, BorderLayout.SOUTH);
+
+        return panel;
     }
 
-    // Tıklanan hücreyi işle
-    private void handleMove(int index) {
+    // WINNING LINE DRAWING
+
+    private class WinningBoardPanel extends JPanel {
+
+        @Override
+        protected void paintChildren(Graphics g) {
+
+            super.paintChildren(g);
+
+            if (board == null || board.getWinner() == ' ') {
+                return;
+            }
+
+            int[] winningCells = board.getWinningCells();
+
+            if (winningCells == null || winningCells.length != 3) {
+                return;
+            }
+
+            JButton firstCell = cells[winningCells[0]];
+            JButton lastCell = cells[winningCells[2]];
+
+            Rectangle firstBounds = firstCell.getBounds();
+            Rectangle lastBounds = lastCell.getBounds();
+
+            int startX = firstBounds.x + firstBounds.width / 2;
+            int startY = firstBounds.y + firstBounds.height / 2;
+
+            int endX = lastBounds.x + lastBounds.width / 2;
+            int endY = lastBounds.y + lastBounds.height / 2;
+
+            Graphics2D g2 = (Graphics2D) g.create();
+
+            g2.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON
+            );
+
+            // Kazanma çizgisi
+            g2.setColor(new Color(160, 255, 205));
+            g2.setStroke(new BasicStroke(
+                    7,
+                    BasicStroke.CAP_ROUND,
+                    BasicStroke.JOIN_ROUND
+            ));
+
+            g2.drawLine(startX, startY, endX, endY);
+
+            g2.dispose();
+        }
+    }
+
+    // GAME OPERATIONS
+
+    private void startGame() {
+
+        playerXName = playerXField.getText().trim();
+        playerOName = playerOField.getText().trim();
+
+        if (playerXName.isEmpty()) {
+            playerXName = "Oyuncu 1";
+        }
+
+        if (playerOName.isEmpty()) {
+            playerOName = "Oyuncu 2";
+        }
+
+        board = new Board(playerXName, playerOName);
+
+        isDrawAlreadyCounted = false;
+
+        clearBoard();
+        updateGameStatus();
+
+        cardLayout.show(screenPanel, "GAME");
+        boardPanel.repaint();
+    }
+
+    private void handleCellClick(int index) {
+
+        if (board == null || isGameFinished()) {
+            return;
+        }
 
         int row = index / 3;
         int col = index % 3;
 
-        boolean validMove = board.makeMove(row, col);
+        if (board.makeMove(row, col)) {
 
-        if (!validMove) {
+            updateBoard();
+            updateGameStatus();
+
+            boardPanel.repaint();
+        }
+    }
+
+    private void updateBoard() {
+
+        for (int i = 0; i < 9; i++) {
+
+            int row = i / 3;
+            int col = i % 3;
+
+            char symbol = board.getCell(row, col);
+
+            cells[i].setText(
+                    symbol == ' ' ? "" : String.valueOf(symbol)
+            );
+
+            if (symbol == 'X') {
+                cells[i].setForeground(X_COLOR);
+            } else if (symbol == 'O') {
+                cells[i].setForeground(O_COLOR);
+            }
+
+            updateCellColor(i);
+        }
+    }
+
+    private void updateCellColor(int index) {
+
+        if (board == null) {
             return;
         }
 
-        char symbol = board.getCell(row, col);
+        int[] winningCells = board.getWinningCells();
 
-        cells[index].setText(String.valueOf(symbol));
+        if (winningCells != null) {
 
-        if (symbol == 'X') {
-            cells[index].setForeground(X_COLOR);
-        } else {
-            cells[index].setForeground(O_COLOR);
+            for (int winningIndex : winningCells) {
+
+                if (winningIndex == index) {
+                    cells[index].setBackground(WIN);
+                    return;
+                }
+            }
         }
 
-        updateGameStatus();
+        if (isCellEmpty(index) &&
+                !isGameFinished() &&
+                cells[index].getMousePosition() != null) {
+
+            cells[index].setBackground(HOVER);
+
+        } else {
+
+            cells[index].setBackground(CELL);
+        }
     }
 
-    // Oyun durumunu güncelle
     private void updateGameStatus() {
 
-        char winner = board.getWinner();
+        if (board.getWinner() != ' ') {
 
-        if (winner != ' ') {
+            String winnerName = board.getWinner() == 'X'
+                    ? board.getXName()
+                    : board.getOName();
 
-            statusLabel.setText("Player " + winner + " Wins!");
-
-            highlightWinningCells();
-
-            updateScores();
+            statusLabel.setText(winnerName + " KAZANDI!");
+            statusLabel.setForeground(new Color(100, 220, 155));
 
         } else if (board.isDraw()) {
 
-            statusLabel.setText("It's a Draw!");
+            statusLabel.setText("BERABERE!");
+            statusLabel.setForeground(new Color(255, 190, 100));
+
+            if (!isDrawAlreadyCounted) {
+                drawCount++;
+                isDrawAlreadyCounted = true;
+            }
 
         } else {
 
             statusLabel.setText(
-                    "Player " +
-                            board.getCurrentPlayerSymbol() +
-                            "'s Turn"
+                    board.getCurrentPlayerName()
+                            + " (" + board.getCurrentPlayerSymbol() + ") OYNUYOR"
             );
-        }
-    }
 
-    // Kazanan hücreleri renklendir
-    private void highlightWinningCells() {
-
-        int[] winningCells = board.getWinningCells();
-
-        if (winningCells == null) {
-            return;
+            statusLabel.setForeground(TEXT);
         }
 
-        for (int index : winningCells) {
-
-            cells[index].setBackground(WIN_COLOR);
-        }
-    }
-
-    // Skorları güncelle
-    private void updateScores() {
-
-        xScoreLabel.setText("X : " + board.getXScore());
-        oScoreLabel.setText("O : " + board.getOScore());
-    }
-
-    // Alt bölüm
-    private JPanel createFooter() {
-
-        JPanel footer = new JPanel();
-
-        footer.setLayout(
-                new BoxLayout(footer, BoxLayout.Y_AXIS)
+        scoreLabel.setText(
+                board.getXName() + ": " + board.getXScore()
+                        + "     |     "
+                        + board.getOName() + ": " + board.getOScore()
         );
 
-        footer.setBackground(BACKGROUND);
-
-        statusLabel = new JLabel("Player X's Turn");
-
-        statusLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        statusLabel.setForeground(Color.WHITE);
-        statusLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        restartButton = new JButton("NEW GAME");
-
-        restartButton.setFont(new Font("Arial", Font.BOLD, 14));
-        restartButton.setForeground(Color.WHITE);
-        restartButton.setBackground(new Color(95, 85, 190));
-
-        restartButton.setFocusPainted(false);
-        restartButton.setBorderPainted(false);
-        restartButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        restartButton.addActionListener(e -> resetGame());
-
-        footer.add(statusLabel);
-        footer.add(Box.createVerticalStrut(12));
-        footer.add(restartButton);
-
-        return footer;
+        drawLabel.setText("Beraberlik: " + drawCount);
     }
 
-    // Oyunu yeniden başlat
+    private boolean isCellEmpty(int index) {
+
+        int row = index / 3;
+        int col = index % 3;
+
+        return board.getCell(row, col) == ' ';
+    }
+
+    private boolean isGameFinished() {
+        return board.getWinner() != ' ' || board.isDraw();
+    }
+
     private void resetGame() {
 
         board.resetBoard();
+        isDrawAlreadyCounted = false;
+
+        clearBoard();
+        updateGameStatus();
+
+        boardPanel.repaint();
+    }
+
+    private void clearBoard() {
 
         for (JButton cell : cells) {
-
             cell.setText("");
-            cell.setForeground(Color.WHITE);
-            cell.setBackground(CELL_COLOR);
+            cell.setForeground(TEXT);
+            cell.setBackground(CELL);
         }
+    }
 
-        statusLabel.setText("Player X's Turn");
+    private void showStartScreen() {
 
-        updateScores();
+        playerXField.setText(playerXName);
+        playerOField.setText(playerOName);
+
+        cardLayout.show(screenPanel, "START");
+    }
+
+    // BUTTON DESIGN
+
+    private JButton createButton(String text, Color color) {
+
+        JButton button = new JButton(text);
+
+        button.setFont(new Font("Arial", Font.BOLD, 17));
+        button.setForeground(Color.WHITE);
+        button.setBackground(color);
+
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setOpaque(true);
+
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setPreferredSize(new Dimension(0, 48));
+
+        button.addMouseListener(new MouseAdapter() {
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                button.setBackground(color.brighter());
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(color);
+            }
+        });
+
+        return button;
     }
 }

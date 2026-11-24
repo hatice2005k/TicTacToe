@@ -6,9 +6,8 @@ public class Main {
     public static void main(String[] args) {
 
         SwingUtilities.invokeLater(() -> {
-            GameFrame gameFrame = new GameFrame();
-            gameFrame.setVisible(true);
+            GameFrame frame = new GameFrame();
+            frame.setVisible(true);
         });
-
     }
 }

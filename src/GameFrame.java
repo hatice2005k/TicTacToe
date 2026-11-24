@@ -6,16 +6,12 @@ public class GameFrame extends JFrame {
     public GameFrame() {
 
         setTitle("Tic Tac Toe");
-        setSize(500, 650);
-
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
+        setSize(520, 720);
+        setMinimumSize(new java.awt.Dimension(480, 650));
         setLocationRelativeTo(null);
         setResizable(false);
 
-        // Oyun arayüzünü pencereye ekle
-        GamePanel gamePanel = new GamePanel();
-
-        add(gamePanel);
+        setContentPane(new GamePanel());
     }
 }
