@@ -1,4 +1,7 @@
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Board {
 
     private final char[][] cells = new char[3][3];
@@ -7,10 +10,10 @@ public class Board {
     private final Player playerO;
 
     private Player currentPlayer;
+    private Character winner;
+    private boolean draw;
 
-    private char winner = ' ';
-    private boolean draw = false;
-    private int[] winningCells;
+    private final List<Integer> winningCells = new ArrayList<>();
 
     public Board(String playerXName, String playerOName) {
         playerX = new Player(playerXName, 'X');
@@ -21,12 +24,11 @@ public class Board {
     }
 
     public boolean makeMove(int row, int col) {
-
         if (row < 0 || row >= 3 || col < 0 || col >= 3) {
             return false;
         }
 
-        if (cells[row][col] != ' ' || winner != ' ' || draw) {
+        if (cells[row][col] != ' ' || winner != null || draw) {
             return false;
         }
 
@@ -38,48 +40,60 @@ public class Board {
         } else if (isBoardFull()) {
             draw = true;
         } else {
-            switchPlayer();
+            currentPlayer = (currentPlayer == playerX) ? playerO : playerX;
         }
 
         return true;
     }
 
     private boolean checkWinner() {
+        winningCells.clear();
 
-        char symbol = currentPlayer.getSymbol();
+        // Rows
+        for (int row = 0; row < 3; row++) {
+            if (cells[row][0] != ' '
+                    && cells[row][0] == cells[row][1]
+                    && cells[row][1] == cells[row][2]) {
 
-        for (int i = 0; i < 3; i++) {
-
-            if (cells[i][0] == symbol &&
-                    cells[i][1] == symbol &&
-                    cells[i][2] == symbol) {
-
-                winningCells = new int[]{i * 3, i * 3 + 1, i * 3 + 2};
-                return true;
-            }
-
-            if (cells[0][i] == symbol &&
-                    cells[1][i] == symbol &&
-                    cells[2][i] == symbol) {
-
-                winningCells = new int[]{i, i + 3, i + 6};
+                winningCells.add(row * 3);
+                winningCells.add(row * 3 + 1);
+                winningCells.add(row * 3 + 2);
                 return true;
             }
         }
 
-        if (cells[0][0] == symbol &&
-                cells[1][1] == symbol &&
-                cells[2][2] == symbol) {
+        // Columns
+        for (int col = 0; col < 3; col++) {
+            if (cells[0][col] != ' '
+                    && cells[0][col] == cells[1][col]
+                    && cells[1][col] == cells[2][col]) {
 
-            winningCells = new int[]{0, 4, 8};
+                winningCells.add(col);
+                winningCells.add(3 + col);
+                winningCells.add(6 + col);
+                return true;
+            }
+        }
+
+        // Main diagonal
+        if (cells[0][0] != ' '
+                && cells[0][0] == cells[1][1]
+                && cells[1][1] == cells[2][2]) {
+
+            winningCells.add(0);
+            winningCells.add(4);
+            winningCells.add(8);
             return true;
         }
 
-        if (cells[0][2] == symbol &&
-                cells[1][1] == symbol &&
-                cells[2][0] == symbol) {
+        // Other diagonal
+        if (cells[0][2] != ' '
+                && cells[0][2] == cells[1][1]
+                && cells[1][1] == cells[2][0]) {
 
-            winningCells = new int[]{2, 4, 6};
+            winningCells.add(2);
+            winningCells.add(4);
+            winningCells.add(6);
             return true;
         }
 
@@ -87,10 +101,8 @@ public class Board {
     }
 
     private boolean isBoardFull() {
-
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
-
                 if (cells[row][col] == ' ') {
                     return false;
                 }
@@ -100,22 +112,22 @@ public class Board {
         return true;
     }
 
-    private void switchPlayer() {
-        currentPlayer = (currentPlayer == playerX) ? playerO : playerX;
-    }
-
     public void resetBoard() {
-
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
                 cells[row][col] = ' ';
             }
         }
 
-        winner = ' ';
-        draw = false;
-        winningCells = null;
         currentPlayer = playerX;
+        winner = null;
+        draw = false;
+        winningCells.clear();
+    }
+
+    public void resetScores() {
+        playerX.resetScore();
+        playerO.resetScore();
     }
 
     public char getCell(int row, int col) {
@@ -130,7 +142,7 @@ public class Board {
         return currentPlayer.getName();
     }
 
-    public char getWinner() {
+    public Character getWinner() {
         return winner;
     }
 
@@ -138,8 +150,8 @@ public class Board {
         return draw;
     }
 
-    public int[] getWinningCells() {
-        return winningCells;
+    public List<Integer> getWinningCells() {
+        return new ArrayList<>(winningCells);
     }
 
     public int getXScore() {
