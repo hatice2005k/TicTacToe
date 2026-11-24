@@ -3,7 +3,8 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 public class GamePanel extends JPanel {
 
@@ -20,6 +21,7 @@ public class GamePanel extends JPanel {
 
     private JTextField playerXField;
     private JTextField playerOField;
+    private JCheckBox computerModeBox;
 
     private Board board;
     private JButton[] cells;
@@ -29,8 +31,11 @@ public class GamePanel extends JPanel {
     private JLabel scoreLabel;
     private JLabel drawLabel;
 
-    private int drawCount = 0;
+    private boolean computerMode = false;
+    private boolean computerThinking = false;
     private boolean isDrawAlreadyCounted = false;
+
+    private int drawCount = 0;
 
     private String playerXName;
     private String playerOName;
@@ -55,9 +60,9 @@ public class GamePanel extends JPanel {
 
     private JPanel createStartScreen() {
 
-        JPanel panel = new JPanel(new BorderLayout(20, 30));
+        JPanel panel = new JPanel(new BorderLayout(20, 25));
         panel.setBackground(BACKGROUND);
-        panel.setBorder(new EmptyBorder(45, 35, 40, 35));
+        panel.setBorder(new EmptyBorder(40, 35, 35, 35));
 
         JLabel title = new JLabel("TIC TAC TOE", SwingConstants.CENTER);
         title.setFont(new Font("Arial", Font.BOLD, 36));
@@ -70,14 +75,14 @@ public class GamePanel extends JPanel {
         subtitle.setFont(new Font("Arial", Font.PLAIN, 15));
         subtitle.setForeground(new Color(175, 175, 190));
 
-        JPanel heading = new JPanel(new GridLayout(2, 1, 5, 12));
+        JPanel heading = new JPanel(new GridLayout(2, 1, 5, 10));
         heading.setBackground(BACKGROUND);
         heading.add(title);
         heading.add(subtitle);
 
         panel.add(heading, BorderLayout.NORTH);
 
-        JPanel form = new JPanel(new GridLayout(2, 1, 20, 20));
+        JPanel form = new JPanel(new GridLayout(3, 1, 15, 15));
         form.setBackground(BACKGROUND);
 
         playerXField = createNameField();
@@ -85,6 +90,21 @@ public class GamePanel extends JPanel {
 
         form.add(createPlayerInput("OYUNCU X", X_COLOR, playerXField));
         form.add(createPlayerInput("OYUNCU O", O_COLOR, playerOField));
+
+        computerModeBox = new JCheckBox("Bilgisayara karşı oyna");
+        computerModeBox.setFont(new Font("Arial", Font.BOLD, 16));
+        computerModeBox.setForeground(TEXT);
+        computerModeBox.setBackground(BACKGROUND);
+        computerModeBox.setFocusPainted(false);
+
+        computerModeBox.addActionListener(e -> {
+            playerOField.setText(
+                    computerModeBox.isSelected() ? "Bilgisayar" : ""
+            );
+            playerOField.setEnabled(!computerModeBox.isSelected());
+        });
+
+        form.add(computerModeBox);
 
         panel.add(form, BorderLayout.CENTER);
 
@@ -144,7 +164,6 @@ public class GamePanel extends JPanel {
         panel.setBackground(BACKGROUND);
         panel.setBorder(new EmptyBorder(25, 25, 20, 25));
 
-        // Üst bilgiler
         JPanel topPanel = new JPanel(new GridLayout(3, 1, 5, 8));
         topPanel.setBackground(BACKGROUND);
 
@@ -166,7 +185,6 @@ public class GamePanel extends JPanel {
 
         panel.add(topPanel, BorderLayout.NORTH);
 
-        // Oyun tahtası
         boardPanel = new WinningBoardPanel();
         boardPanel.setLayout(new GridLayout(3, 3, 10, 10));
         boardPanel.setBackground(BACKGROUND);
@@ -182,12 +200,10 @@ public class GamePanel extends JPanel {
             button.setFont(new Font("Arial", Font.BOLD, 65));
             button.setForeground(TEXT);
             button.setBackground(CELL);
-
             button.setFocusPainted(false);
             button.setBorderPainted(false);
             button.setOpaque(true);
             button.setContentAreaFilled(true);
-
             button.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
             button.addActionListener(e -> handleCellClick(index));
@@ -195,16 +211,17 @@ public class GamePanel extends JPanel {
             button.addMouseListener(new MouseAdapter() {
 
                 @Override
-                public void mouseEntered(MouseEvent e) {
+                public void mouseEntered(java.awt.event.MouseEvent e) {
                     if (board != null &&
                             isCellEmpty(index) &&
-                            !isGameFinished()) {
+                            !isGameFinished() &&
+                            !computerThinking) {
                         button.setBackground(HOVER);
                     }
                 }
 
                 @Override
-                public void mouseExited(MouseEvent e) {
+                public void mouseExited(java.awt.event.MouseEvent e) {
                     updateCellColor(index);
                 }
             });
@@ -215,7 +232,6 @@ public class GamePanel extends JPanel {
 
         panel.add(boardPanel, BorderLayout.CENTER);
 
-        // Alt butonlar
         JPanel bottomPanel = new JPanel(new GridLayout(1, 2, 10, 0));
         bottomPanel.setBackground(BACKGROUND);
 
@@ -240,7 +256,7 @@ public class GamePanel extends JPanel {
         return panel;
     }
 
-    // WINNING LINE DRAWING
+    // WINNING LINE
 
     private class WinningBoardPanel extends JPanel {
 
@@ -259,17 +275,14 @@ public class GamePanel extends JPanel {
                 return;
             }
 
-            JButton firstCell = cells[winningCells[0]];
-            JButton lastCell = cells[winningCells[2]];
+            Rectangle first = cells[winningCells[0]].getBounds();
+            Rectangle last = cells[winningCells[2]].getBounds();
 
-            Rectangle firstBounds = firstCell.getBounds();
-            Rectangle lastBounds = lastCell.getBounds();
+            int startX = first.x + first.width / 2;
+            int startY = first.y + first.height / 2;
 
-            int startX = firstBounds.x + firstBounds.width / 2;
-            int startY = firstBounds.y + firstBounds.height / 2;
-
-            int endX = lastBounds.x + lastBounds.width / 2;
-            int endY = lastBounds.y + lastBounds.height / 2;
+            int endX = last.x + last.width / 2;
+            int endY = last.y + last.height / 2;
 
             Graphics2D g2 = (Graphics2D) g.create();
 
@@ -278,7 +291,6 @@ public class GamePanel extends JPanel {
                     RenderingHints.VALUE_ANTIALIAS_ON
             );
 
-            // Kazanma çizgisi
             g2.setColor(new Color(160, 255, 205));
             g2.setStroke(new BasicStroke(
                     7,
@@ -287,7 +299,6 @@ public class GamePanel extends JPanel {
             ));
 
             g2.drawLine(startX, startY, endX, endY);
-
             g2.dispose();
         }
     }
@@ -303,13 +314,18 @@ public class GamePanel extends JPanel {
             playerXName = "Oyuncu 1";
         }
 
-        if (playerOName.isEmpty()) {
+        computerMode = computerModeBox.isSelected();
+
+        if (computerMode) {
+            playerOName = "Bilgisayar";
+        } else if (playerOName.isEmpty()) {
             playerOName = "Oyuncu 2";
         }
 
         board = new Board(playerXName, playerOName);
 
         isDrawAlreadyCounted = false;
+        computerThinking = false;
 
         clearBoard();
         updateGameStatus();
@@ -320,7 +336,14 @@ public class GamePanel extends JPanel {
 
     private void handleCellClick(int index) {
 
-        if (board == null || isGameFinished()) {
+        if (board == null ||
+                isGameFinished() ||
+                computerThinking) {
+            return;
+        }
+
+        if (computerMode &&
+                board.getCurrentPlayerSymbol() != 'X') {
             return;
         }
 
@@ -331,10 +354,196 @@ public class GamePanel extends JPanel {
 
             updateBoard();
             updateGameStatus();
-
             boardPanel.repaint();
+
+            if (computerMode && !isGameFinished()) {
+                computerMove();
+            }
         }
     }
+
+    // COMPUTER MOVE
+
+    private void computerMove() {
+
+        computerThinking = true;
+        statusLabel.setText("BİLGİSAYAR DÜŞÜNÜYOR...");
+        statusLabel.setForeground(O_COLOR);
+
+        // Kullanıcı arayüzünü bloklamadan kısa bir bekleme.
+        Timer timer = new Timer(450, e -> {
+
+            ((Timer) e.getSource()).stop();
+
+            int[] bestMove = findBestMove();
+
+            if (bestMove != null && !isGameFinished()) {
+                board.makeMove(bestMove[0], bestMove[1]);
+            }
+
+            computerThinking = false;
+
+            updateBoard();
+            updateGameStatus();
+            boardPanel.repaint();
+        });
+
+        timer.setRepeats(false);
+        timer.start();
+    }
+
+    private int[] findBestMove() {
+
+        char[][] simulation = new char[3][3];
+
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+                simulation[row][col] = board.getCell(row, col);
+            }
+        }
+
+        int bestScore = Integer.MIN_VALUE;
+        int[] bestMove = null;
+
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+
+                if (simulation[row][col] == ' ') {
+
+                    simulation[row][col] = 'O';
+
+                    int score = minimax(
+                            simulation,
+                            0,
+                            false
+                    );
+
+                    simulation[row][col] = ' ';
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = new int[]{row, col};
+                    }
+                }
+            }
+        }
+
+        return bestMove;
+    }
+
+    private int minimax(
+            char[][] cells,
+            int depth,
+            boolean maximizing
+    ) {
+
+        if (hasWinner(cells, 'O')) {
+            return 10 - depth;
+        }
+
+        if (hasWinner(cells, 'X')) {
+            return depth - 10;
+        }
+
+        if (isFull(cells)) {
+            return 0;
+        }
+
+        if (maximizing) {
+
+            int bestScore = Integer.MIN_VALUE;
+
+            for (int row = 0; row < 3; row++) {
+                for (int col = 0; col < 3; col++) {
+
+                    if (cells[row][col] == ' ') {
+
+                        cells[row][col] = 'O';
+
+                        int score = minimax(
+                                cells,
+                                depth + 1,
+                                false
+                        );
+
+                        cells[row][col] = ' ';
+
+                        bestScore = Math.max(bestScore, score);
+                    }
+                }
+            }
+
+            return bestScore;
+
+        } else {
+
+            int bestScore = Integer.MAX_VALUE;
+
+            for (int row = 0; row < 3; row++) {
+                for (int col = 0; col < 3; col++) {
+
+                    if (cells[row][col] == ' ') {
+
+                        cells[row][col] = 'X';
+
+                        int score = minimax(
+                                cells,
+                                depth + 1,
+                                true
+                        );
+
+                        cells[row][col] = ' ';
+
+                        bestScore = Math.min(bestScore, score);
+                    }
+                }
+            }
+
+            return bestScore;
+        }
+    }
+
+    private boolean hasWinner(char[][] cells, char symbol) {
+
+        for (int i = 0; i < 3; i++) {
+
+            if (cells[i][0] == symbol &&
+                    cells[i][1] == symbol &&
+                    cells[i][2] == symbol) {
+                return true;
+            }
+
+            if (cells[0][i] == symbol &&
+                    cells[1][i] == symbol &&
+                    cells[2][i] == symbol) {
+                return true;
+            }
+        }
+
+        return (cells[0][0] == symbol &&
+                cells[1][1] == symbol &&
+                cells[2][2] == symbol)
+                ||
+                (cells[0][2] == symbol &&
+                        cells[1][1] == symbol &&
+                        cells[2][0] == symbol);
+    }
+
+    private boolean isFull(char[][] cells) {
+
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 3; col++) {
+
+                if (cells[row][col] == ' ') {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    // UI UPDATE
 
     private void updateBoard() {
 
@@ -368,9 +577,7 @@ public class GamePanel extends JPanel {
         int[] winningCells = board.getWinningCells();
 
         if (winningCells != null) {
-
             for (int winningIndex : winningCells) {
-
                 if (winningIndex == index) {
                     cells[index].setBackground(WIN);
                     return;
@@ -381,11 +588,8 @@ public class GamePanel extends JPanel {
         if (isCellEmpty(index) &&
                 !isGameFinished() &&
                 cells[index].getMousePosition() != null) {
-
             cells[index].setBackground(HOVER);
-
         } else {
-
             cells[index].setBackground(CELL);
         }
     }
@@ -445,11 +649,12 @@ public class GamePanel extends JPanel {
     private void resetGame() {
 
         board.resetBoard();
+
         isDrawAlreadyCounted = false;
+        computerThinking = false;
 
         clearBoard();
         updateGameStatus();
-
         boardPanel.repaint();
     }
 
@@ -465,7 +670,10 @@ public class GamePanel extends JPanel {
     private void showStartScreen() {
 
         playerXField.setText(playerXName);
-        playerOField.setText(playerOName);
+        playerOField.setText(computerMode ? "" : playerOName);
+
+        computerModeBox.setSelected(computerMode);
+        playerOField.setEnabled(!computerMode);
 
         cardLayout.show(screenPanel, "START");
     }
@@ -490,12 +698,12 @@ public class GamePanel extends JPanel {
         button.addMouseListener(new MouseAdapter() {
 
             @Override
-            public void mouseEntered(MouseEvent e) {
+            public void mouseEntered(java.awt.event.MouseEvent e) {
                 button.setBackground(color.brighter());
             }
 
             @Override
-            public void mouseExited(MouseEvent e) {
+            public void mouseExited(java.awt.event.MouseEvent e) {
                 button.setBackground(color);
             }
         });
