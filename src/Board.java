@@ -5,13 +5,14 @@ public class Board {
 
     private Player playerX;
     private Player playerO;
-
     private Player currentPlayer;
 
     private char winner;
     private boolean draw;
 
-    // Constructor
+    // Kazanan hücrelerin indeksleri
+    private int[] winningCells;
+
     public Board() {
 
         playerX = new Player('X');
@@ -25,19 +26,16 @@ public class Board {
     // Hamle yapma
     public boolean makeMove(int row, int col) {
 
-        // Hücre doluysa hamleyi kabul etme
         if (cells[row][col] != ' ') {
             return false;
         }
 
-        // Kazanan veya beraberlik varsa hamle yapma
         if (winner != ' ' || draw) {
             return false;
         }
 
         cells[row][col] = currentPlayer.getSymbol();
 
-        // Kazanma kontrolü
         if (checkWinner()) {
 
             winner = currentPlayer.getSymbol();
@@ -49,7 +47,6 @@ public class Board {
 
         } else {
 
-            // Sırayı diğer oyuncuya geçir
             switchPlayer();
         }
 
@@ -61,23 +58,31 @@ public class Board {
 
         char symbol = currentPlayer.getSymbol();
 
-        // Satır kontrolü
+        // Yatay kontrol
         for (int i = 0; i < 3; i++) {
 
             if (cells[i][0] == symbol &&
                     cells[i][1] == symbol &&
                     cells[i][2] == symbol) {
 
+                winningCells = new int[]{
+                        i * 3, i * 3 + 1, i * 3 + 2
+                };
+
                 return true;
             }
         }
 
-        // Sütun kontrolü
+        // Dikey kontrol
         for (int i = 0; i < 3; i++) {
 
             if (cells[0][i] == symbol &&
                     cells[1][i] == symbol &&
                     cells[2][i] == symbol) {
+
+                winningCells = new int[]{
+                        i, i + 3, i + 6
+                };
 
                 return true;
             }
@@ -88,6 +93,8 @@ public class Board {
                 cells[1][1] == symbol &&
                 cells[2][2] == symbol) {
 
+            winningCells = new int[]{0, 4, 8};
+
             return true;
         }
 
@@ -96,13 +103,15 @@ public class Board {
                 cells[1][1] == symbol &&
                 cells[2][0] == symbol) {
 
+            winningCells = new int[]{2, 4, 6};
+
             return true;
         }
 
         return false;
     }
 
-    // Tahtanın dolu olup olmadığını kontrol et
+    // Tahta dolu mu?
     private boolean isBoardFull() {
 
         for (int row = 0; row < 3; row++) {
@@ -141,11 +150,12 @@ public class Board {
 
         winner = ' ';
         draw = false;
+        winningCells = null;
+
         currentPlayer = playerX;
     }
 
     // Getter metotları
-
     public char getCell(int row, int col) {
         return cells[row][col];
     }
@@ -168,5 +178,9 @@ public class Board {
 
     public int getOScore() {
         return playerO.getScore();
+    }
+
+    public int[] getWinningCells() {
+        return winningCells;
     }
 }

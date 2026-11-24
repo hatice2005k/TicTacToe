@@ -9,6 +9,7 @@ public class GamePanel extends JPanel {
     private final Color CELL_COLOR = new Color(48, 53, 68);
     private final Color X_COLOR = new Color(70, 190, 180);
     private final Color O_COLOR = new Color(235, 115, 135);
+    private final Color WIN_COLOR = new Color(40, 115, 85);
 
     // Oyun motoru
     private Board board;
@@ -42,15 +43,23 @@ public class GamePanel extends JPanel {
     private JPanel createHeader() {
 
         JPanel header = new JPanel();
-        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+
+        header.setLayout(
+                new BoxLayout(header, BoxLayout.Y_AXIS)
+        );
+
         header.setBackground(BACKGROUND);
 
         JLabel title = new JLabel("TIC TAC TOE");
+
         title.setFont(new Font("Arial", Font.BOLD, 30));
         title.setForeground(Color.WHITE);
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JPanel scorePanel = new JPanel(new GridLayout(1, 2, 15, 0));
+        JPanel scorePanel = new JPanel(
+                new GridLayout(1, 2, 15, 0)
+        );
+
         scorePanel.setBackground(BACKGROUND);
 
         xScoreLabel = new JLabel("X : 0", SwingConstants.CENTER);
@@ -69,7 +78,7 @@ public class GamePanel extends JPanel {
         return header;
     }
 
-    // Skor tasarımı
+    // Skor etiketlerinin tasarımı
     private void styleScoreLabel(JLabel label, Color color) {
 
         label.setFont(new Font("Arial", Font.BOLD, 20));
@@ -104,7 +113,6 @@ public class GamePanel extends JPanel {
 
             cells[i] = cell;
 
-            // Her butona tıklama olayı ekle
             final int index = i;
 
             cell.addActionListener(e -> handleMove(index));
@@ -121,27 +129,22 @@ public class GamePanel extends JPanel {
         int row = index / 3;
         int col = index % 3;
 
-        // Hamle geçerli mi?
         boolean validMove = board.makeMove(row, col);
 
         if (!validMove) {
             return;
         }
 
-        // Tahtadaki sembolü al
         char symbol = board.getCell(row, col);
 
-        // Butona sembolü yaz
         cells[index].setText(String.valueOf(symbol));
 
-        // Sembole göre renk belirle
         if (symbol == 'X') {
             cells[index].setForeground(X_COLOR);
         } else {
             cells[index].setForeground(O_COLOR);
         }
 
-        // Oyun durumunu kontrol et
         updateGameStatus();
     }
 
@@ -153,6 +156,8 @@ public class GamePanel extends JPanel {
         if (winner != ' ') {
 
             statusLabel.setText("Player " + winner + " Wins!");
+
+            highlightWinningCells();
 
             updateScores();
 
@@ -170,6 +175,21 @@ public class GamePanel extends JPanel {
         }
     }
 
+    // Kazanan hücreleri renklendir
+    private void highlightWinningCells() {
+
+        int[] winningCells = board.getWinningCells();
+
+        if (winningCells == null) {
+            return;
+        }
+
+        for (int index : winningCells) {
+
+            cells[index].setBackground(WIN_COLOR);
+        }
+    }
+
     // Skorları güncelle
     private void updateScores() {
 
@@ -182,7 +202,10 @@ public class GamePanel extends JPanel {
 
         JPanel footer = new JPanel();
 
-        footer.setLayout(new BoxLayout(footer, BoxLayout.Y_AXIS));
+        footer.setLayout(
+                new BoxLayout(footer, BoxLayout.Y_AXIS)
+        );
+
         footer.setBackground(BACKGROUND);
 
         statusLabel = new JLabel("Player X's Turn");
@@ -201,7 +224,6 @@ public class GamePanel extends JPanel {
         restartButton.setBorderPainted(false);
         restartButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Yeni oyun butonu
         restartButton.addActionListener(e -> resetGame());
 
         footer.add(statusLabel);
@@ -220,6 +242,7 @@ public class GamePanel extends JPanel {
 
             cell.setText("");
             cell.setForeground(Color.WHITE);
+            cell.setBackground(CELL_COLOR);
         }
 
         statusLabel.setText("Player X's Turn");
